@@ -9,15 +9,15 @@ export interface OfficeItem {
 
 export type OfficeItemWithoutId = Omit<OfficeItem, 'id'>;
 
-export interface CategoryOrPlace {
+export interface OfficeElement {
   id: number;
   name: string;
   description: string | null;
 }
 
-export type CategoryOrPlaceWithoutId = Omit<CategoryOrPlace, 'id'>;
+export type OfficeElementWithoutId = Omit<OfficeElement, 'id'>;
 
-export interface ApiCategoryOrPlace {
+export interface ApiOfficeElement {
   id: number;
   name: string;
 }
