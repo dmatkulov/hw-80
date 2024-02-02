@@ -5,6 +5,34 @@ import {Resource} from '../types';
 
 const placesRouter = Router();
 
+placesRouter.post('/', async (req, res, next) => {
+  try {
+    const name = req.body.name;
+    
+    if (!name) {
+      return res.status(422).send({error: 'Place name must be present'});
+    }
+    
+    const place: Resource = {
+      name: req.body.name,
+      description: req.body.description ? req.body.description : null,
+    };
+    
+    const [result] = await mysqlDb.getConnection().query(
+      'INSERT INTO places (name, description) VALUES (?, ?)',
+      [place.name, place.description]
+    ) as ResultSetHeader[];
+    
+    res.send({
+      id: result.insertId,
+      ...place,
+    });
+    
+  } catch (e) {
+    next(e);
+  }
+});
+
 placesRouter.get('/', async (req, res, next) => {
   try {
     const [results] = await mysqlDb.getConnection().query(
@@ -35,31 +63,44 @@ placesRouter.get('/:id', async (req, res, next) => {
   }
 });
 
-placesRouter.post('/', async (req, res, next) => {
+placesRouter.put('/:id', async (req, res, next) => {
+  const placeId = req.params.id;
+  const name = req.body.name;
+  
+  if (!name) {
+    return res.status(422).send({error: 'Place name must be present'});
+  }
+  
+  const place: Resource = {
+    name: req.body.name,
+    description: req.body.description ? req.body.description : null,
+  };
+  
   try {
-    const name = req.body.name;
+    const places = await mysqlDb.getConnection().query('SELECT * FROM places WHERE id = ? ', [placeId]) as RowDataPacket[];
+    const existingPlaces = places[0];
     
-    if (!name) {
-      return res.status(422).send({error: 'Place name must be present'});
+    if (existingPlaces.length === 0) {
+      return res.status(404).send({error: 'Place not found'});
     }
     
-    const place: Resource = {
-      name: req.body.name,
-      description: req.body.description ? req.body.description : null,
-    };
+    await mysqlDb.getConnection().query(
+      'UPDATE places SET `name` = ?, `description` = ? WHERE id = ? ',
+      [place.name, place.description, placeId]
+    );
     
     const [result] = await mysqlDb.getConnection().query(
-      'INSERT INTO places (name, description) VALUES (?, ?)',
-      [place.name, place.description]
-    ) as ResultSetHeader[];
+      'SELECT * FROM places WHERE id = ? ',
+      [placeId]
+    ) as RowDataPacket[];
+    
+    const updatedPlace = result[0];
     
     res.send({
-      id: result.insertId,
-      ...place,
+      ...updatedPlace
     });
-    
   } catch (e) {
-    next(e);
+    return next(e);
   }
 });
 
@@ -82,7 +123,7 @@ placesRouter.delete('/:id', async (req, res, next) => {
     if (existingPlace.length === 0) {
       return res.status(404).send({error: 'Place not found'});
     }
-
+    
     await mysqlDb.getConnection().query('DELETE FROM places WHERE id = ? ', [placeId]);
     res.send({message: 'Place deleted successfully'});
   } catch (e) {

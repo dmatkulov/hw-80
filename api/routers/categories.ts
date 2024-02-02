@@ -4,6 +4,35 @@ import {ResultSetHeader, RowDataPacket} from 'mysql2';
 import {Resource} from '../types';
 
 const categoriesRouter = Router();
+
+categoriesRouter.post('/', async (req, res, next) => {
+  try {
+    const name = req.body.name;
+    
+    if (!name) {
+      return res.status(422).send({error: 'Category name must be present'});
+    }
+    
+    const category: Resource = {
+      name: req.body.name,
+      description: req.body.description ? req.body.description : null,
+    };
+    
+    const [result] = await mysqlDb.getConnection().query(
+      'INSERT INTO categories (name, description) VALUES (?, ?)',
+      [category.name, category.description]
+    ) as ResultSetHeader[];
+    
+    res.send({
+      id: result.insertId,
+      ...category,
+    });
+    
+  } catch (e) {
+    next(e);
+  }
+});
+
 categoriesRouter.get('/', async (req, res, next) => {
   try {
     const [results] = await mysqlDb.getConnection().query(
@@ -33,31 +62,42 @@ categoriesRouter.get('/:id', async (req, res, next) => {
   }
 });
 
-categoriesRouter.post('/', async (req, res, next) => {
+categoriesRouter.put('/:id', async (req, res, next) => {
+  const categoryId = req.params.id;
+  const name = req.body.name;
+  
+  if (!name) {
+    return res.status(422).send({error: 'Category name must be present'});
+  }
+  
+  const category: Resource = {
+    name: req.body.name,
+    description: req.body.description ? req.body.description : null,
+  };
+  
   try {
-    const name = req.body.name;
+    const categories = await mysqlDb.getConnection().query('SELECT * FROM categories WHERE id = ? ', [categoryId]) as RowDataPacket[];
+    const existingCategories = categories[0];
     
-    if (!name) {
-      return res.status(422).send({error: 'Category name must be present'});
+    if (existingCategories.length === 0) {
+      return res.status(404).send({error: 'Category not found'});
     }
     
-    const category: Resource = {
-      name: req.body.name,
-      description: req.body.description ? req.body.description : null,
-    };
+    await mysqlDb.getConnection().query(
+      'UPDATE categories SET `name` = ?, `description` = ? WHERE id = ? ',
+      [category.name, category.description, categoryId]
+    );
     
     const [result] = await mysqlDb.getConnection().query(
-      'INSERT INTO categories (name, description) VALUES (?, ?)',
-      [category.name, category.description]
-    ) as ResultSetHeader[];
+      'SELECT * FROM categories WHERE id = ? ',
+      [categoryId]
+    ) as RowDataPacket[];
     
     res.send({
-      id: result.insertId,
-      ...category,
+      ...result[0]
     });
-    
   } catch (e) {
-    next(e);
+    return next(e);
   }
 });
 
