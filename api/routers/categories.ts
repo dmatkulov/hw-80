@@ -61,4 +61,30 @@ categoriesRouter.post('/', async (req, res, next) => {
   }
 });
 
+categoriesRouter.delete('/:id', async (req, res, next) => {
+  const categoryId = req.params.id;
+  try {
+    const [results] = await mysqlDb.getConnection().query(
+      'SELECT * FROM items WHERE category_id = ? ',
+      [categoryId],
+    ) as RowDataPacket[];
+    
+    if (results.length > 0) {
+      return res.status(400).send({error: 'Cannot delete category with related items'});
+    }
+    
+    const categories = await mysqlDb.getConnection().query('SELECT * FROM categories WHERE id = ? ', [categoryId]) as RowDataPacket[];
+    const existingCategories = categories[0];
+    
+    if (existingCategories.length === 0) {
+      return res.status(404).send({error: 'Category not found'});
+    }
+    
+    await mysqlDb.getConnection().query('DELETE FROM categories WHERE id = ? ', [categoryId]);
+    res.send({message: 'Category deleted successfully'});
+  } catch (e) {
+    return next(e);
+  }
+});
+
 export default categoriesRouter;

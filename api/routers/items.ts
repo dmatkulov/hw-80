@@ -69,4 +69,26 @@ itemsRouter.post('/', imageUpload.single('image'), async (req, res, next) => {
   }
 });
 
+itemsRouter.delete('/:id', async (req, res, next) => {
+  const itemId = req.params.id;
+  
+  try {
+    const [results] = await mysqlDb.getConnection().query(
+      'SELECT * FROM items WHERE id = ? ',
+      [itemId],
+    ) as RowDataPacket[];
+    
+    const existingItem = results[0];
+    
+    if (!existingItem) {
+      return res.status(404).send({error: 'Item not found'});
+    }
+    
+    await mysqlDb.getConnection().query('DELETE FROM items WHERE id = ?', [itemId]);
+    res.send({message: 'Item deleted successfully'});
+  } catch (e) {
+    return next(e);
+  }
+});
+
 export default itemsRouter;
