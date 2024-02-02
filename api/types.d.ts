@@ -3,21 +3,13 @@ export interface OfficeItem {
   categoryId: number;
   placeId: number;
   name: string;
-  description: string;
+  description: string | null;
   image: string | null;
 }
 
 export type OfficeItemWithoutId = Omit<OfficeItem, 'id'>;
 
-export interface OfficeElement {
-  id: number;
+export interface Resource {
   name: string;
   description: string | null;
-}
-
-export type OfficeElementWithoutId = Omit<OfficeElement, 'id'>;
-
-export interface ApiOfficeElement {
-  id: number;
-  name: string;
 }
